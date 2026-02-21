@@ -5,6 +5,16 @@
 # terraform destroy --auto-approve
 # rm -rf .terraform.lock.hcl .terraform terraform.tfstate
 
+# -------------------------------------------------------------
+# SageMaker Notebook Instance Types (Reference Table)
+#
+# Instance Type       vCPUs   RAM (GiB)
+# --------------      ------  ----------
+# ml.t3.medium        2         4
+# ml.t3.large         2         8
+# ml.t3.xlarge        4        16
+# -------------------------------------------------------------
+
 terraform {
   required_version = ">= 1.14.3"
   required_providers {
@@ -29,7 +39,7 @@ provider "aws" {
 # ---------------------------
 
 locals {
-  instance_type = "ml.t3.large" # ml.t3.medium, ml.t3.large or ml.t3.xlarge
+  instance_type = "ml.t3.large" 
 }
 
 # ---------------------------

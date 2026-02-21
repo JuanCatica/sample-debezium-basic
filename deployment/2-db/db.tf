@@ -5,10 +5,17 @@
 # terraform destroy --auto-approve
 # rm -rf .terraform.lock.hcl .terraform terraform.tfstate
 
-# habilitar LogMiner para CDC
-# ALTER DATABASE ARCHIVELOG;
-# ALTER DATABASE ADD SUPPLEMENTAL LOG DATA;
-# ALTER DATABASE ADD SUPPLEMENTAL LOG DATA (ALL) COLUMNS;
+# -------------------------------------------------------------
+# Oracle RDS Instance Types (Reference Table)
+#
+# Instance Type   vCPUs   RAM (GiB)
+# --------------  ------  ----------
+# db.t3.small         2         2
+# db.t3.medium        2         4
+# db.t3.large         2         8
+# db.t3.xlarge        4        16
+# -------------------------------------------------------------
+
 
 terraform {
   required_version = ">= 1.14.3"
@@ -32,7 +39,7 @@ locals {
   source_db_username       = "admin"
   source_db_password       = "changeme123"
   source_db_port           = 1521
-  source_rds_instance_type = "db.t3.small" # db.t3.small, db.t3.medium, db.t3.large or db.t3.xlarge
+  source_rds_instance_type = "db.t3.large"
 }
 
 # ---------------------------
