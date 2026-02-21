@@ -36,6 +36,7 @@ class SQLLoader:
         self.registers_inserted = 0
         self.registers_updated = 0
         self.registers_deleted = 0
+        self.start_time = None
         
         self.__status = {
             "state": self.AVAILABLE,
@@ -87,8 +88,9 @@ class SQLLoader:
         uid = f"I:{i}, U:{u}, D:{d}"
         uid_s = f"I/s:{i_s:.0f}, U/s:{u_s:.0f}, D/s:{d_s:.0f}"
         percent = f"Loop:{loop_perc:.2f}%, DF:{db_perc:.2f}%"
+        run_time = f"Run Time: {time.time() - self.start_time:.2f}s"    
         
-        message = f"{state_db} | {uid} | {uid_s} | {percent}"
+        message = f"{state_db} | {uid} | {uid_s} | {percent} | {run_time}"
         return message
     
     def __printUI(self, message):
@@ -181,6 +183,9 @@ class SQLLoader:
         max_registers = max_registers if max_registers else not_inserted
         num_iters = math.ceil(min(max_registers/float(inserts), not_inserted/float(inserts)))
         iterations = range(num_iters) if uix else tqdm(range(num_iters))
+
+        # SET START TIME
+        self.start_time = time.time()
         
         # MAIN LOOP
         for i in iterations:            

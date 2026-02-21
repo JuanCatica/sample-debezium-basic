@@ -34,25 +34,6 @@ variable "deployment_name" {
   description = "Nombre del deployment (debe coincidir con 1-vpc, 2-db, 5-kafka)"
 }
 
-variable "oracle_password" {
-  type        = string
-  description = "Contraseña del usuario Oracle (debe coincidir con 2-db)"
-  default     = "changeme123"
-  sensitive   = true
-}
-
-variable "debezium_topic_prefix" {
-  type        = string
-  description = "Prefijo para los topics de Debezium"
-  default     = "oracle-cdc"
-}
-
-variable "table_include_list" {
-  type        = string
-  description = "Lista de tablas/schemas a capturar (ej: ADMIN.table1, ADMIN.table2 o .* para todo)"
-  default     = ".*"
-}
-
 # ---------------------------
 # Locals
 # ---------------------------
@@ -61,6 +42,9 @@ locals {
   kafka_connect_version = "3.6.0"
   mcu_count             = 2
   worker_count          = 1 # Debezium Oracle requiere tasks.max=1
+  oracle_password       = "changeme123"
+  debezium_topic_prefix = "oracle-cdc"
+  table_include_list    = ".*"
 }
 
 # ---------------------------
@@ -163,7 +147,7 @@ resource "aws_secretsmanager_secret_version" "oracle_credentials" {
 
   secret_string = jsonencode({
     username = data.aws_db_instance.oracle.master_username
-    password = var.oracle_password
+    password = local.oracle_password
   })
 }
 
@@ -305,11 +289,11 @@ resource "aws_mskconnect_connector" "debezium_oracle" {
     "database.user"                                                       = "$${secretManager:${aws_secretsmanager_secret.oracle_credentials.name}:username}"
     "database.password"                                                   = "$${secretManager:${aws_secretsmanager_secret.oracle_credentials.name}:password}"
     "database.dbname"                                                     = data.aws_db_instance.oracle.db_name
-    "topic.prefix"                                                        = var.debezium_topic_prefix
-    "table.include.list"                                                  = var.table_include_list
+    "topic.prefix"                                                        = local.debezium_topic_prefix
+    "table.include.list"                                                  = local.table_include_list
     "database.connection.adapter"                                         = "logminer"
     "snapshot.mode"                                                       = "initial"
-    "schema.history.internal.kafka.topic"                                 = "${var.debezium_topic_prefix}-schema-history"
+    "schema.history.internal.kafka.topic"                                 = "${local.debezium_topic_prefix}-schema-history"
     "schema.history.internal.kafka.bootstrap.servers"                     = data.aws_msk_cluster.main.bootstrap_brokers_sasl_iam
     "schema.history.internal.consumer.security.protocol"                  = "SASL_SSL"
     "schema.history.internal.consumer.sasl.mechanism"                     = "AWS_MSK_IAM"
@@ -393,7 +377,7 @@ output "msk_connect_connector_name" {
 
 output "debezium_topic_prefix" {
   description = "Prefijo de los topics CDC"
-  value       = var.debezium_topic_prefix
+  value       = local.debezium_topic_prefix
 }
 
 output "oracle_connection_info" {
