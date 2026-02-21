@@ -1,0 +1,162 @@
+#!/bin/bash
+
+# Uso: ./stack <deploy|destroy> [stack_name]
+#   deploy  - Despliega el stack con terraform apply
+#   destroy - Destruye el stack con terraform destroy
+#   stack_name - Opcional: nombre del stack. Si no se pasa, muestra menú interactivo
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+DEPLOYMENT_DIR="$PROJECT_ROOT/deployment"
+
+# Validar primer parámetro: deploy o destroy
+ACTION="${1:-}"
+if [ -z "$ACTION" ]; then
+    echo "Uso: $0 <deploy|destroy> [stack_name]"
+    echo ""
+    echo "  deploy  - Despliega el stack"
+    echo "  destroy - Destruye el stack"
+    echo "  stack_name - Opcional. Si no se indica, se mostrará un menú"
+    exit 1
+fi
+
+if [ "$ACTION" != "deploy" ] && [ "$ACTION" != "destroy" ]; then
+    echo "Error: Acción inválida '$ACTION'"
+    echo "Acciones válidas: deploy, destroy"
+    exit 1
+fi
+
+# Segundo parámetro opcional: nombre del stack
+STACK_ARG="$2"
+
+# Obtener todos los stacks disponibles en deployment (directorios N-nombre)
+STACKS=()
+while IFS= read -r -d '' dir; do
+    name=$(basename "$dir")
+    STACKS+=("$name")
+done < <(find "$DEPLOYMENT_DIR" -mindepth 1 -maxdepth 1 -type d ! -name '.*' 2>/dev/null | sort | tr '\n' '\0')
+
+# Si no hay stacks, salir
+if [ ${#STACKS[@]} -eq 0 ]; then
+    echo "Error: No se encontraron stacks en deployment/"
+    exit 1
+fi
+
+# Si no se proporcionó stack como argumento, mostrar menú interactivo
+if [ -z "$STACK_ARG" ]; then
+    if [ "$ACTION" = "deploy" ]; then
+        prompt_msg="Seleccione el stack a desplegar (número): "
+    else
+        prompt_msg="Seleccione el stack a destruir (número): "
+    fi
+
+    echo "================================================"
+    echo "Stacks disponibles en deployment:"
+    echo "================================================"
+    for i in "${!STACKS[@]}"; do
+        echo "  $((i+1))) ${STACKS[$i]}"
+    done
+    echo "  0) Salir"
+    echo "================================================"
+    read -p "$prompt_msg" choice
+
+    if [ "$choice" = "0" ] || [ -z "$choice" ]; then
+        echo "Operación cancelada."
+        exit 0
+    fi
+
+    if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt ${#STACKS[@]} ]; then
+        echo "Error: Opción inválida '$choice'"
+        exit 1
+    fi
+
+    STACK="${STACKS[$((choice-1))]}"
+else
+    STACK="$STACK_ARG"
+
+    # Validar que el stack existe
+    valid=false
+    for s in "${STACKS[@]}"; do
+        if [ "$s" = "$STACK" ]; then
+            valid=true
+            break
+        fi
+    done
+
+    if [ "$valid" = false ]; then
+        echo "Error: Stack inválido '$STACK'"
+        echo "Stacks válidos: ${STACKS[*]}"
+        exit 1
+    fi
+fi
+
+# Leer o validar TF_VAR_deployment_name
+if [ -z "$TF_VAR_deployment_name" ]; then
+    if [ -f "$PROJECT_ROOT/deployment_name.txt" ]; then
+        export TF_VAR_deployment_name=$(cat "$PROJECT_ROOT/deployment_name.txt" | tr -d '\n' | tr -d ' ')
+        echo "Variable leída desde archivo: TF_VAR_deployment_name=$TF_VAR_deployment_name"
+    else
+        echo "================================================"
+        echo "TF_VAR_deployment_name no está definida"
+        if [ "$ACTION" = "deploy" ]; then
+            echo "Por favor, ingrese un nombre para el deployment:"
+        else
+            echo "Por favor, ingrese el nombre del deployment a destruir:"
+        fi
+        read -p "Nombre del deployment: " TF_VAR_deployment_name
+
+        if [ -z "$TF_VAR_deployment_name" ]; then
+            echo "Error: Debe proporcionar un nombre para el deployment"
+            exit 1
+        fi
+
+        export TF_VAR_deployment_name
+        echo "Usando nombre ingresado: TF_VAR_deployment_name=$TF_VAR_deployment_name"
+        echo "================================================"
+    fi
+else
+    echo "Usando variable existente: TF_VAR_deployment_name=$TF_VAR_deployment_name"
+fi
+
+echo $TF_VAR_deployment_name > "$PROJECT_ROOT/deployment_name.txt"
+
+# Validar que el nombre solo contenga letras y guiones (no _ ni caracteres especiales)
+if ! [[ "$TF_VAR_deployment_name" =~ ^[a-zA-Z]([a-zA-Z-]*[a-zA-Z])?$ ]]; then
+    echo "================================================"
+    echo "Error: El nombre del deployment es inválido"
+    echo "Nombre actual: '$TF_VAR_deployment_name'"
+    echo ""
+    echo "Reglas:"
+    echo "  - Solo puede contener letras (a-z, A-Z) y guiones (-)"
+    echo "  - No puede contener guiones bajos (_)"
+    echo "  - No puede contener caracteres especiales"
+    echo "  - Debe comenzar y terminar con una letra"
+    echo ""
+    echo "Ejemplos válidos: my-deployment, prod-env, test"
+    echo "Ejemplos inválidos: my_deployment, -prod, test-, 123test"
+    echo "================================================"
+    exit 1
+fi
+
+echo "Validación exitosa: nombre del deployment es válido"
+
+DEPLOY_DIR="$DEPLOYMENT_DIR/$STACK"
+
+echo "================================================"
+if [ "$ACTION" = "deploy" ]; then
+    echo "Desplegando stack: $STACK"
+else
+    echo "Destruyendo stack: $STACK"
+fi
+echo "Directorio: $DEPLOY_DIR"
+echo "================================================"
+
+# Ir al directorio y ejecutar terraform
+cd "$DEPLOY_DIR"
+terraform init
+
+if [ "$ACTION" = "deploy" ]; then
+    terraform apply
+else
+    terraform destroy
+fi

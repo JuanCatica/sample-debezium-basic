@@ -1,0 +1,38 @@
+.venv/
+**/.venv/
+
+# Terraform state files
+terraform.tfstate
+terraform.tfstate.*
+**/terraform.tfstate
+**/terraform.tfstate.*
+.terraform/
+**/.terraform/
+
+.terraform.lock.hcl
+**/.terraform.lock.hcl
+.terraform.tfstate.lock.info
+**/.terraform.tfstate.lock.info
+__pycache__
+**/__pycache__
+
+# OS files
+.DS_Store
+
+# Deployment name and agent settings
+deployment_name.txt
+agent_settings.json
+MCP_Auth_Collection*
+
+# Environment files
+.env
+.env.*
+*.env
+
+# AWS credentials
+.aws/
+credentials
+
+# Local configuration
+config.local.*
+*secrets*

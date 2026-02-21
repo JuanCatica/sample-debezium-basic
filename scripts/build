@@ -1,0 +1,34 @@
+#!/bin/bash
+
+if [ -z "$TF_VAR_deployment_name" ]; then
+    if [ -f "deployment_name.txt" ]; then
+        export TF_VAR_deployment_name=$(cat deployment_name.txt | tr -d '\n' | tr -d ' ')
+        echo "Variable leída desde archivo: TF_VAR_deployment_name=$TF_VAR_deployment_name"
+    else
+        echo "Error: TF_VAR_deployment_name no definida y deployment_name.txt no existe"
+        exit 1
+    fi
+else
+    echo "Usando variable existente: TF_VAR_deployment_name=$TF_VAR_deployment_name"
+fi
+
+cd mcp_server
+
+echo "1. Setting AWS Account number (AWS_ACCOUNT)"
+export AWS_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+echo "AWS_ACCOUNT: $AWS_ACCOUNT" 
+
+echo "2. Getting authentication token and authenticate docker"
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $AWS_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com
+
+echo "3. Building image"
+docker build --platform linux/amd64 -t $TF_VAR_deployment_name .
+
+echo "4. Tagging and uploading"
+docker tag $TF_VAR_deployment_name:latest $AWS_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/ecr-$TF_VAR_deployment_name:latest
+docker push $AWS_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/ecr-$TF_VAR_deployment_name:latest
+
+echo "5. Updating ECS service"
+aws ecs update-service --cluster ecs-custer-$TF_VAR_deployment_name --service ecs-service-$TF_VAR_deployment_name --force-new-deployment --region us-east-1 > /dev/null
+
+echo "Check for ECS service deployment to complete..."
