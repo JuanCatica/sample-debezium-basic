@@ -119,7 +119,7 @@ resource "null_resource" "build_and_upload_plugin" {
   }
 
   provisioner "local-exec" {
-    command     = "chmod +x ${path.module}/scripts/build_debezium_oracle_plugin.sh && ${path.module}/scripts/build_debezium_oracle_plugin.sh ${aws_s3_bucket.connector_plugins.bucket} ${data.aws_region.current.name}"
+    command     = "chmod +x ${path.module}/scripts/build_debezium_oracle_plugin.sh && ${path.module}/scripts/build_debezium_oracle_plugin.sh ${aws_s3_bucket.connector_plugins.bucket} ${data.aws_region.current.region}"
     interpreter = ["bash", "-c"]
   }
 
@@ -179,7 +179,7 @@ key.converter=org.apache.kafka.connect.storage.StringConverter
 value.converter=org.apache.kafka.connect.storage.StringConverter
 config.providers=secretManager
 config.providers.secretManager.class=com.github.jcustenborder.kafka.config.aws.SecretsManagerConfigProvider
-config.providers.secretManager.param.aws.region=${data.aws_region.current.name}
+config.providers.secretManager.param.aws.region=${data.aws_region.current.region}
 PROPERTIES
 }
 
@@ -204,7 +204,7 @@ resource "aws_iam_role" "msk_connect_service" {
             "aws:SourceAccount" = data.aws_caller_identity.current.account_id
           }
           ArnLike = {
-            "aws:SourceArn" = "arn:aws:kafkaconnect:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:connector/*"
+            "aws:SourceArn" = "arn:aws:kafkaconnect:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:connector/*"
           }
         }
       }
@@ -233,7 +233,7 @@ resource "aws_iam_role_policy" "msk_connect_service" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/msk-connect/*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/msk-connect/*"
       },
       {
         Effect = "Allow"

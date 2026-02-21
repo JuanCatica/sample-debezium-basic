@@ -154,6 +154,65 @@ resource "aws_db_subnet_group" "subnet_group_source" {
 
 
 # ---------------------------
+# SSM Parameters (for notebook /dbtester/*)
+# ---------------------------
+
+resource "aws_ssm_parameter" "dbhost" {
+  name  = "/dbtester/dbhost"
+  type  = "String"
+  value = aws_db_instance.oracle_source.address
+
+  tags = {
+    Name        = "dbtester-dbhost-${var.deployment_name}"
+    Environment = var.deployment_name
+  }
+}
+
+resource "aws_ssm_parameter" "dbport" {
+  name  = "/dbtester/dbport"
+  type  = "String"
+  value = tostring(aws_db_instance.oracle_source.port)
+
+  tags = {
+    Name        = "dbtester-dbport-${var.deployment_name}"
+    Environment = var.deployment_name
+  }
+}
+
+resource "aws_ssm_parameter" "dbuser" {
+  name  = "/dbtester/dbuser"
+  type  = "String"
+  value = aws_db_instance.oracle_source.username
+
+  tags = {
+    Name        = "dbtester-dbuser-${var.deployment_name}"
+    Environment = var.deployment_name
+  }
+}
+
+resource "aws_ssm_parameter" "dbpass" {
+  name  = "/dbtester/dbpass"
+  type  = "SecureString"
+  value = local.source_db_password
+
+  tags = {
+    Name        = "dbtester-dbpass-${var.deployment_name}"
+    Environment = var.deployment_name
+  }
+}
+
+resource "aws_ssm_parameter" "dbname" {
+  name  = "/dbtester/dbname"
+  type  = "String"
+  value = aws_db_instance.oracle_source.db_name
+
+  tags = {
+    Name        = "dbtester-dbname-${var.deployment_name}"
+    Environment = var.deployment_name
+  }
+}
+
+# ---------------------------
 # Outputs for DataGrip Connection
 # ---------------------------
 

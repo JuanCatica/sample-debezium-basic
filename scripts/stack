@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Uso: ./stack <deploy|destroy> [stack_name]
-#   deploy  - Despliega el stack con terraform apply
-#   destroy - Destruye el stack con terraform destroy
-#   stack_name - Opcional: nombre del stack. Si no se pasa, muestra menú interactivo
+#   deploy    - Despliega el stack con terraform apply
+#   destroy   - Destruye el stack con terraform destroy
+#   stack_name - Opcional. Si no se pasa, muestra menú y usa --auto-approve al seleccionar
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -43,7 +43,10 @@ if [ ${#STACKS[@]} -eq 0 ]; then
 fi
 
 # Si no se proporcionó stack como argumento, mostrar menú interactivo
+# (al seleccionar del menú se usará --auto-approve)
+SELECTED_FROM_MENU=false
 if [ -z "$STACK_ARG" ]; then
+    SELECTED_FROM_MENU=true
     if [ "$ACTION" = "deploy" ]; then
         prompt_msg="Seleccione el stack a desplegar (número): "
     else
@@ -155,8 +158,14 @@ echo "================================================"
 cd "$DEPLOY_DIR"
 terraform init
 
+# Usar --auto-approve si se seleccionó del menú
+AUTO_APPROVE=""
+if [ "$SELECTED_FROM_MENU" = true ]; then
+    AUTO_APPROVE="--auto-approve"
+fi
+
 if [ "$ACTION" = "deploy" ]; then
-    terraform apply
+    terraform apply $AUTO_APPROVE
 else
-    terraform destroy
+    terraform destroy $AUTO_APPROVE
 fi
