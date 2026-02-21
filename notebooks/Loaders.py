@@ -128,14 +128,14 @@ class SQLLoader:
             temp_df["_update"] = temp_df["_update"] + 1
             temp_df["_update_time"] = time.time()
 
-            index_ids = temp_df.index.to_list()
-            update_time = time.time()
-            stmt = text(
-                f"UPDATE {self.dbtable} SET _update = _update + 1, _update_time = :t "
-                f'WHERE "index" IN :ids'
-            ).bindparams(bindparam("ids", expanding=True))
+            indexes_str = map(lambda x: str(x), temp_df.index.to_list())
+            indexes = ",".join(indexes_str)
             with self.engine.begin() as conn:
-                conn.execute(stmt, {"t": update_time, "ids": index_ids})
+                conn.execute(text(f"""
+                    UPDATE {self.dbtable}
+                    SET _update = _update + 1, _update_time = {time.time()}
+                    WHERE "index" IN ({indexes})
+                """))
             self.df[self.df.index.isin(temp_df.index)] = temp_df.copy()
             self.registers_updated += len(temp_df)
             time.sleep(delay)
@@ -149,12 +149,13 @@ class SQLLoader:
             temp_df["_delete"] = temp_df["_delete"] + 1
             temp_df["_delete_time"] = time.time()
 
-            index_ids = temp_df.index.to_list()
-            stmt = text(f'DELETE FROM {self.dbtable} WHERE "index" IN :ids').bindparams(
-                bindparam("ids", expanding=True)
-            )
+            indexes_str = map(lambda x: str(x), temp_df.index.to_list())
+            indexes = ",".join(indexes_str)
             with self.engine.begin() as conn:
-                conn.execute(stmt, {"ids": index_ids})
+                conn.execute(text(f"""
+                    DELETE FROM {self.dbtable}
+                    WHERE "index" IN ({indexes})
+                """))
             self.df[self.df.index.isin(temp_df.index)] = temp_df.copy()
             self.registers_deleted += len(temp_df)
             time.sleep(delay)
