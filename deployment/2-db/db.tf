@@ -32,7 +32,7 @@ locals {
   source_db_username       = "admin"
   source_db_password       = "changeme123"
   source_db_port           = 1521
-  source_rds_instance_type = "db.t3.small"
+  source_rds_instance_type = "db.t3.small" # db.t3.small, db.t3.medium, db.t3.large or db.t3.xlarge
 }
 
 # ---------------------------
