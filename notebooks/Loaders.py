@@ -59,6 +59,25 @@ class SQLLoader:
         if drop:
             self.drop_table()
 
+    def enable_cdc_supplemental_logging(self):
+        """
+        Enable supplemental logging on Oracle RDS for CDC (Change Data Capture).
+        Required for Debezium/Oracle CDC to capture before/after values.
+        """
+        plsql_config = """
+            begin
+                rdsadmin.rdsadmin_util.force_logging(p_enable => true);
+                rdsadmin.rdsadmin_util.alter_supplemental_logging(p_action => 'ADD');
+                rdsadmin.rdsadmin_util.alter_supplemental_logging(p_action => 'ADD',p_type => 'ALL');
+                rdsadmin.rdsadmin_util.alter_supplemental_logging(p_action => 'ADD',p_type => 'PRIMARY KEY');
+                rdsadmin.rdsadmin_util.switch_logfile;
+                rdsadmin.rdsadmin_master_util.create_archivelog_dir;
+                rdsadmin.rdsadmin_master_util.create_onlinelog_dir;
+            end;
+        """
+        with self.engine.begin() as conn:
+            conn.execute(text(plsql_config))
+        print("CDC supplemental logging enabled successfully.")
         
     def __get_message(self, in_db="", i="", u="", d="", i_s="", u_s="", d_s="", loop_perc="", db_perc=""):
         state = self.__status["state"]
