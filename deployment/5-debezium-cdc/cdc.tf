@@ -204,6 +204,7 @@ resource "aws_iam_role_policy" "msk_connect_service" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
+      # Secrets Manager - Oracle credentials
       {
         Effect = "Allow"
         Action = [
@@ -211,6 +212,7 @@ resource "aws_iam_role_policy" "msk_connect_service" {
         ]
         Resource = aws_secretsmanager_secret.oracle_credentials.arn
       },
+      # CloudWatch Logs
       {
         Effect = "Allow"
         Action = [
@@ -220,12 +222,42 @@ resource "aws_iam_role_policy" "msk_connect_service" {
         ]
         Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/msk-connect/*"
       },
+      # S3 - plugin
       {
         Effect = "Allow"
         Action = [
           "s3:GetObject"
         ]
         Resource = "${aws_s3_bucket.connector_plugins.arn}/*"
+      },
+      # MSK cluster - Connect & Describe (required for IAM auth)
+      {
+        Effect = "Allow"
+        Action = [
+          "kafka-cluster:Connect",
+          "kafka-cluster:DescribeCluster"
+        ]
+        Resource = data.aws_msk_cluster.main.arn
+      },
+      # MSK topics - Read, Write, Create (schema history, CDC topics)
+      {
+        Effect = "Allow"
+        Action = [
+          "kafka-cluster:CreateTopic",
+          "kafka-cluster:ReadData",
+          "kafka-cluster:WriteData",
+          "kafka-cluster:DescribeTopic"
+        ]
+        Resource = "${replace(data.aws_msk_cluster.main.arn, ":cluster/", ":topic/")}/*"
+      },
+      # MSK consumer groups - Alter, Describe (Kafka Connect internal)
+      {
+        Effect = "Allow"
+        Action = [
+          "kafka-cluster:AlterGroup",
+          "kafka-cluster:DescribeGroup"
+        ]
+        Resource = "${replace(data.aws_msk_cluster.main.arn, ":cluster/", ":group/")}/*"
       }
     ]
   })
