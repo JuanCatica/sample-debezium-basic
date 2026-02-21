@@ -12,9 +12,6 @@ import awswrangler as wr
 from sqlalchemy import create_engine, text, bindparam
 from tqdm import tqdm
 
-from IPython.display import display, Markdown, clear_output
-import ipywidgets as widgets
-
 ######################################
 # SQLLoader Class
 #
@@ -60,30 +57,6 @@ class SQLLoader:
         
         if drop:
             self.drop_table() 
-    
-        # -----------
-        # UI ELEMENTS
-        # 
-        self.out = widgets.Output()
-        start_button = widgets.Button(description='Start')
-        stop_button = widgets.Button(description='Stop')
-        destroy_button = widgets.Button(description='Destroy Process')
-        
-        def start_button_clicked(_):
-            self.__status["state"] = self.RUNNING
-            
-        def stop_button_clicked(_):
-            self.__status["state"] = self.STOPPED
-            
-        def destroy_button_clicked(_):
-            self.__status["state"] = self.DESTROYED
-            
-        start_button.on_click(start_button_clicked)
-        stop_button.on_click(stop_button_clicked)
-        destroy_button.on_click(destroy_button_clicked)
-        
-        self.buttons = widgets.HBox([start_button, stop_button, destroy_button])    
-        self.box = widgets.VBox([self.buttons, self.out])
         
     def __get_message(self, in_db="", i="", u="", d="", i_s="", u_s="", d_s="", loop_perc="", db_perc=""):
         state = self.__status["state"]
@@ -98,9 +71,7 @@ class SQLLoader:
         return message
     
     def __printUI(self, message):
-        with self.out:
-            clear_output(wait=True)
-            display(message)
+        print(message, end="\r", flush=True)
     
     def insert(self, registers=10, delay=0):
         """
@@ -225,19 +196,9 @@ class SQLLoader:
             else:
                 self.__printUI(message)
                 
-            # STOP LOOP
-            while self.__status["state"] == self.STOPPED:
-                time.sleep(0.01)
-               
-            # DESTROY
-            if self.__status["state"] == self.DESTROYED:
-                self.__printUI(message)
-                break
-                
         # LAST MESSAGE
         self.__status["state"] = self.AVAILABLE
         message = self.__get_message(in_db, inserted, updated, deleted, i_s, u_s, d_s, loop_perc, df_perc)
-        clear_output(wait=True)
         print(message)
     
     def iudx(self, inserts=10, updates=5, deletes=0, delay=0):
@@ -248,7 +209,6 @@ class SQLLoader:
             print("There is already a 'iudx' load in progress")
         else:
             _thread.start_new_thread(self.iud, (inserts, updates , deletes, delay, None, True))
-        return self.box
 
     def status(self):
         """
@@ -334,30 +294,6 @@ class DynamoLoader:
                 self.create_table() 
         else:
             self.create_table()
-    
-        # -----------
-        # UI ELEMENTS
-        # 
-        self.out = widgets.Output()
-        start_button = widgets.Button(description='Start')
-        stop_button = widgets.Button(description='Stop')
-        destroy_button = widgets.Button(description='Destroy Process')
-        
-        def start_button_clicked(_):
-            self.__status["state"] = self.RUNNING
-            
-        def stop_button_clicked(_):
-            self.__status["state"] = self.STOPPED
-            
-        def destroy_button_clicked(_):
-            self.__status["state"] = self.DESTROYED
-            
-        start_button.on_click(start_button_clicked)
-        stop_button.on_click(stop_button_clicked)
-        destroy_button.on_click(destroy_button_clicked)
-        
-        self.buttons = widgets.HBox([start_button, stop_button, destroy_button])    
-        self.box = widgets.VBox([self.buttons, self.out])
         
     def __get_message(self, in_db="", i="", u="", d="", i_s="", u_s="", d_s="", loop_perc="", db_perc=""):
         state = self.__status["state"]
@@ -372,9 +308,7 @@ class DynamoLoader:
         return message
     
     def __printUI(self, message):
-        with self.out:
-            clear_output(wait=True)
-            display(message)
+        print(message, end="\r", flush=True)
     
     def insert(self, registers=10, delay=0):
         """
@@ -482,19 +416,9 @@ class DynamoLoader:
             else:
                 self.__printUI(message)
                 
-            # STOP LOOP
-            while self.__status["state"] == self.STOPPED:
-                time.sleep(0.01)
-               
-            # DESTROY
-            if self.__status["state"] == self.DESTROYED:
-                self.__printUI(message)
-                break
-                
         # LAST MESSAGE
         self.__status["state"] = self.AVAILABLE
         message = self.__get_message(in_db, inserted, updated, deleted, i_s, u_s, d_s, loop_perc, df_perc)
-        clear_output(wait=True)
         print(message)
     
     def iudx(self, inserts=10, updates=5, deletes=0, delay=0):
@@ -505,7 +429,6 @@ class DynamoLoader:
             print("There is already a 'iudx' load in progress")
         else:
             _thread.start_new_thread(self.iud, (inserts, updates , deletes, delay, None, True))
-        return self.box
 
     def status(self):
         """
@@ -611,30 +534,6 @@ class KinesisLoader:
         self.df = pd.read_csv(f"{self.file}",dtype=dtype, parse_dates=date_fields)
         self.df["_sent"] = pd.Series([0]*len(self.df), dtype='int16')
         self.df["_sent_time"] = 0
-        
-        # -----------
-        # UI ELEMENTS
-        # 
-        self.out = widgets.Output()
-        start_button = widgets.Button(description='Start')
-        stop_button = widgets.Button(description='Stop')
-        destroy_button = widgets.Button(description='Destroy Process')
-        
-        def start_button_clicked(_):
-            self.__status["state"] = self.RUNNING
-            
-        def stop_button_clicked(_):
-            self.__status["state"] = self.STOPPED
-            
-        def destroy_button_clicked(_):
-            self.__status["state"] = self.DESTROYED
-            
-        start_button.on_click(start_button_clicked)
-        stop_button.on_click(stop_button_clicked)
-        destroy_button.on_click(destroy_button_clicked)
-        
-        self.buttons = widgets.HBox([start_button, stop_button, destroy_button])    
-        self.box = widgets.VBox([self.buttons, self.out])
 
     def __get_message(self, events="", events_s="", loop_perc="", db_perc=""):
         state = self.__status["state"]
@@ -643,9 +542,7 @@ class KinesisLoader:
         return message
         
     def __printUI(self, message):
-        with self.out:
-            clear_output(wait=True)
-            display(message)
+        print(message, end="\r", flush=True)
     
     def load(self, max_events=None, partition_key="defaul-partitionkey", delay=0, restart=False, uix=False):
         """
@@ -703,19 +600,9 @@ class KinesisLoader:
                 else:
                     self.__printUI(message)
                 
-            # STOP LOOP
-            while self.__status["state"] == self.STOPPED:
-                time.sleep(0.01)
-                
-            # DESTROY
-            if self.__status["state"] == self.DESTROYED:
-                self.__printUI(message)
-                break
-        
         # LAST MESSAGE
         self.__status["state"] = self.AVAILABLE
         message = self.__get_message(self.events_sent, events_s, loop_perc, df_perc)
-        clear_output(wait=True)
         print(message)
     
     def loadx(self, max_events=None, partition_ket="defaul-partitionkey", delay=0, restart=False):
@@ -726,7 +613,6 @@ class KinesisLoader:
             print("There is already a 'loadx' load in progress")
         else:
             _thread.start_new_thread(self.load, (max_events, partition_ket, delay, restart, True))
-        return self.box
 
     def status(self):
         return { "EventsSend":self.events_sent }
