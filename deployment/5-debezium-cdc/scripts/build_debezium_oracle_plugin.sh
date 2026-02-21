@@ -10,10 +10,11 @@
 set -euo pipefail
 
 DEBEZIUM_VERSION="2.5.0.Final"
-CONFIG_PROVIDER_VERSION="0.1.2"
+CONFIG_PROVIDER_VERSION="0.4.0"
 
 DEBEZIUM_URL="https://repo1.maven.org/maven2/io/debezium/debezium-connector-oracle/${DEBEZIUM_VERSION}/debezium-connector-oracle-${DEBEZIUM_VERSION}-plugin.tar.gz"
-CONFIG_PROVIDER_URL="https://github.com/jcustenborder/kafka-config-provider-aws/releases/download/${CONFIG_PROVIDER_VERSION}/jcustenborder-kafka-config-provider-aws-${CONFIG_PROVIDER_VERSION}.zip"
+# AWS official config provider (Secrets Manager, SSM, S3) - jcustenborder releases have no assets
+CONFIG_PROVIDER_URL="https://github.com/aws-samples/msk-config-providers/releases/download/r${CONFIG_PROVIDER_VERSION}/msk-config-providers-${CONFIG_PROVIDER_VERSION}-with-dependencies.zip"
 
 BUCKET="${1:?Usage: $0 <s3-bucket> <aws-region>}"
 AWS_REGION="${2:?Usage: $0 <s3-bucket> <aws-region>}"
@@ -24,13 +25,13 @@ trap "rm -rf $WORK_DIR" EXIT
 echo "==> Descargando Debezium Oracle connector ${DEBEZIUM_VERSION}..."
 curl -sSL -o "$WORK_DIR/debezium.tar.gz" "$DEBEZIUM_URL"
 
-echo "==> Descargando AWS Secrets Manager Config Provider ${CONFIG_PROVIDER_VERSION}..."
+echo "==> Descargando AWS MSK Config Providers ${CONFIG_PROVIDER_VERSION}..."
 curl -sSL -L -o "$WORK_DIR/config-provider.zip" "$CONFIG_PROVIDER_URL"
 
 echo "==> Extrayendo archivos..."
 mkdir -p "$WORK_DIR/debezium" "$WORK_DIR/config-provider"
 tar -xzf "$WORK_DIR/debezium.tar.gz" -C "$WORK_DIR/debezium"
-unzip -q "$WORK_DIR/config-provider.zip" -d "$WORK_DIR/config-provider"
+unzip -q -o "$WORK_DIR/config-provider.zip" -d "$WORK_DIR/config-provider"
 
 echo "==> Combinando plugins..."
 PLUGIN_DIR="$WORK_DIR/plugin"

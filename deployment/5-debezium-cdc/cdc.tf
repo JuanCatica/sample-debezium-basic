@@ -39,9 +39,10 @@ variable "deployment_name" {
 # ---------------------------
 
 locals {
-  kafka_connect_version = "3.6.0"
+  kafka_connect_version = "3.7.x"
   mcu_count             = 2
-  worker_count          = 1 # Debezium Oracle requiere tasks.max=1
+  min_worker_count      = 1 # Debezium Oracle requiere tasks.max=1
+  max_worker_count      = 3
   oracle_password       = "changeme123"
   debezium_topic_prefix = "oracle-cdc"
   table_include_list    = ".*"
@@ -161,9 +162,9 @@ resource "aws_mskconnect_worker_configuration" "debezium" {
   properties_file_content = <<PROPERTIES
 key.converter=org.apache.kafka.connect.storage.StringConverter
 value.converter=org.apache.kafka.connect.storage.StringConverter
-config.providers=secretManager
-config.providers.secretManager.class=com.github.jcustenborder.kafka.config.aws.SecretsManagerConfigProvider
-config.providers.secretManager.param.aws.region=${data.aws_region.current.region}
+config.providers=secretsmanager
+config.providers.secretsmanager.class=com.amazonaws.kafka.config.providers.SecretsManagerConfigProvider
+config.providers.secretsmanager.param.region=${data.aws_region.current.region}
 PROPERTIES
 }
 
@@ -270,8 +271,8 @@ resource "aws_mskconnect_connector" "debezium_oracle" {
   capacity {
     autoscaling {
       mcu_count        = local.mcu_count
-      min_worker_count = local.worker_count
-      max_worker_count = local.worker_count
+      min_worker_count = local.min_worker_count
+      max_worker_count = local.max_worker_count
       scale_in_policy {
         cpu_utilization_percentage = 20
       }
@@ -286,8 +287,8 @@ resource "aws_mskconnect_connector" "debezium_oracle" {
     "tasks.max"                                                           = "1"
     "database.hostname"                                                   = data.aws_db_instance.oracle.address
     "database.port"                                                       = tostring(data.aws_db_instance.oracle.port)
-    "database.user"                                                       = "$${secretManager:${aws_secretsmanager_secret.oracle_credentials.name}:username}"
-    "database.password"                                                   = "$${secretManager:${aws_secretsmanager_secret.oracle_credentials.name}:password}"
+    "database.user"                                                       = "$${secretsmanager:${aws_secretsmanager_secret.oracle_credentials.name}:username}"
+    "database.password"                                                   = "$${secretsmanager:${aws_secretsmanager_secret.oracle_credentials.name}:password}"
     "database.dbname"                                                     = data.aws_db_instance.oracle.db_name
     "topic.prefix"                                                        = local.debezium_topic_prefix
     "table.include.list"                                                  = local.table_include_list
