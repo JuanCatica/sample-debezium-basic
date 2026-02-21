@@ -86,6 +86,7 @@ data "aws_msk_cluster" "main" {
 
 resource "aws_s3_bucket" "connector_plugins" {
   bucket = "msk-connect-debezium-plugins-${var.deployment_name}-${data.aws_caller_identity.current.account_id}"
+  force_destroy = true
 
   tags = {
     Name    = "msk-connect-plugins-${var.deployment_name}"

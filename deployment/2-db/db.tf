@@ -142,7 +142,7 @@ resource "aws_db_instance" "oracle_source" {
   vpc_security_group_ids          = [aws_security_group.allow_public_source.id]
   enabled_cloudwatch_logs_exports = ["alert", "audit", "listener", "trace"]
   backup_retention_period         = 1
-  monitoring_interval             = 0
+  monitoring_interval             = 30
 
   tags = {
     Name = "oracle_source-${var.deployment_name}"

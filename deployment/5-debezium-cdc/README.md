@@ -4,8 +4,9 @@ Despliega un connector MSK Connect con Debezium para capturar cambios de Oracle 
 
 ## Requisitos previos
 
-1. **Deployments anteriores**: Ejecutar en orden: `1-vpc`, `2-db`, `5-kafka`
-2. **Oracle**: Habilitar ARCHIVELOG y supplemental logging (requerido por LogMiner):
+1. **Deployments anteriores**: Ejecutar en orden: `1-vpc`, `2-db`, `4-kafka`
+2. **VPC Endpoints**: El módulo `1-vpc` incluye endpoints para Secrets Manager y STS (requeridos por MSK Connect en subnets privadas sin NAT). Si ya desplegaste la VPC antes, ejecuta `terraform apply` en `1-vpc` para añadirlos.
+3. **Oracle**: Habilitar ARCHIVELOG y supplemental logging (requerido por LogMiner):
 
 ```sql
 -- Conectar como SYSDBA
@@ -19,7 +20,7 @@ ALTER DATABASE ADD SUPPLEMENTAL LOG DATA (ALL) COLUMNS;
 ## Despliegue
 
 ```bash
-cd deployment/4-debezium-cdc
+cd deployment/5-debezium-cdc
 terraform init
 terraform plan -var="deployment_name=<tu-nombre>"
 terraform apply -var="deployment_name=<tu-nombre>"

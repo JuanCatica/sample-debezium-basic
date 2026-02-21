@@ -171,6 +171,22 @@ module "endpoints" {
       private_dns_enabled = true
       tags                = { Name = "logs-endpoint-${var.deployment_name}" }
     }
+
+    # Secrets Manager - required for MSK Connect config provider (Oracle credentials)
+    secretsmanager = {
+      service             = "secretsmanager"
+      subnet_ids          = module.vpc.private_subnets
+      private_dns_enabled = true
+      tags                = { Name = "secretsmanager-endpoint-${var.deployment_name}" }
+    }
+
+    # STS - required for MSK Connect IAM authentication to Kafka cluster
+    sts = {
+      service             = "sts"
+      subnet_ids          = module.vpc.private_subnets
+      private_dns_enabled = true
+      tags                = { Name = "sts-endpoint-${var.deployment_name}" }
+    }
   }
 }
 
