@@ -118,7 +118,7 @@ resource "aws_sagemaker_code_repository" "sample_debezium" {
 
 resource "aws_sagemaker_notebook_instance" "datagen_notebook" {
   name                     = "datagen-notebook-${var.deployment_name}"
-  instance_type            = "ml.t3.medium"
+  instance_type            = "ml.t3.large" # ml.t3.medium, ml.t3.large or ml.t3.xlarge
   role_arn                 = aws_iam_role.sagemaker_notebook_role.arn
   subnet_id                = data.aws_subnets.public.ids[0]
   security_groups          = [aws_security_group.datagen_notebook_sg.id]
