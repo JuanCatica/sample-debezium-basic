@@ -227,6 +227,21 @@ resource "aws_msk_cluster" "main" {
 }
 
 # ---------------------------
+# SSM Parameters (for notebook /kafka/*)
+# ---------------------------
+
+resource "aws_ssm_parameter" "bootstrap_servers" {
+  name  = "/kafka/bootstrap_servers"
+  type  = "String"
+  value = aws_msk_cluster.main.bootstrap_brokers
+
+  tags = {
+    Name        = "kafka-bootstrap-${var.deployment_name}"
+    Environment = var.deployment_name
+  }
+}
+
+# ---------------------------
 # Outputs
 # ---------------------------
 

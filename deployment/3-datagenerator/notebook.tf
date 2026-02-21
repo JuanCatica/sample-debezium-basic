@@ -195,7 +195,8 @@ resource "aws_iam_role_policy" "sagemaker_notebook_ssm" {
           "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter/dbtester/dbport",
           "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter/dbtester/dbuser",
           "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter/dbtester/dbpass",
-          "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter/dbtester/dbname"
+          "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter/dbtester/dbname",
+          "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter/kafka/bootstrap_servers"
         ]
       }
     ]
