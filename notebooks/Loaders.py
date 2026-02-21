@@ -9,7 +9,7 @@ from collections import deque
 import boto3
 import pandas as pd
 import awswrangler as wr
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text, bindparam
 from tqdm import tqdm
 
 from IPython.display import display, Markdown, clear_output
@@ -27,13 +27,14 @@ class SQLLoader:
     RUNNING = "RUNNING"
     DESTROYED = "DESTOYED"
     
-    def __init__(self, file, dbengine, dbhost, dbuser, dbpass, dbname, dbtable, drop=False, dtype={}, date_fields=[]):
+    def __init__(self, file, dbengine, dbhost, dbuser, dbpass, dbport, dbname, dbtable, drop=False, dtype={}, date_fields=[], dtype_db=None):
         """
         
         """
         self.file = file
-        self.engine = create_engine(f'{dbengine}://{dbuser}:{dbpass}@{dbhost}:5432/{dbname}')
+        self.engine = create_engine(f'{dbengine}://{dbuser}:{dbpass}@{dbhost}:{dbport}/{dbname}')
         self.dbtable = dbtable
+        self.dtype_db = dtype_db or {}
         
         self.iteration = 0
         self.registers_inserted = 0
@@ -111,7 +112,8 @@ class SQLLoader:
         temp_df.drop(["_delete","_delete_time"],axis=1).to_sql(
             name=self.dbtable,
             con=self.engine,
-            if_exists="append"
+            if_exists="append",
+            dtype=self.dtype_db
         )
         self.df.iloc[self.registers_inserted : self.registers_inserted + registers] = temp_df
         self.registers_inserted += registers
@@ -126,13 +128,14 @@ class SQLLoader:
             temp_df["_update"] = temp_df["_update"] + 1
             temp_df["_update_time"] = time.time()
 
-            indexes_str = map(lambda x: str(x), temp_df.index.to_list())
-            indexes = ",".join(indexes_str)
-            self.engine.execute(f"""
-                UPDATE {self.dbtable}
-                SET _update = _update + 1, _update_time = {time.time()}
-                WHERE index IN ({indexes})
-            """)
+            index_ids = temp_df.index.to_list()
+            update_time = time.time()
+            stmt = text(
+                f"UPDATE {self.dbtable} SET _update = _update + 1, _update_time = :t "
+                f'WHERE "index" IN :ids'
+            ).bindparams(bindparam("ids", expanding=True))
+            with self.engine.begin() as conn:
+                conn.execute(stmt, {"t": update_time, "ids": index_ids})
             self.df[self.df.index.isin(temp_df.index)] = temp_df.copy()
             self.registers_updated += len(temp_df)
             time.sleep(delay)
@@ -146,12 +149,12 @@ class SQLLoader:
             temp_df["_delete"] = temp_df["_delete"] + 1
             temp_df["_delete_time"] = time.time()
 
-            indexes_str = map(lambda x: str(x), temp_df.index.to_list())
-            indexes = ",".join(indexes_str)
-            self.engine.execute(f"""
-                DELETE FROM {self.dbtable}
-                WHERE index IN ({indexes})
-            """)
+            index_ids = temp_df.index.to_list()
+            stmt = text(f'DELETE FROM {self.dbtable} WHERE "index" IN :ids').bindparams(
+                bindparam("ids", expanding=True)
+            )
+            with self.engine.begin() as conn:
+                conn.execute(stmt, {"ids": index_ids})
             self.df[self.df.index.isin(temp_df.index)] = temp_df.copy()
             self.registers_deleted += len(temp_df)
             time.sleep(delay)
@@ -168,7 +171,7 @@ class SQLLoader:
         assert inserts > deletes, "'inserts' must be grather than 'deletes'."
         
         # INITIATING STATE AND VARS
-        self.__status["state"] = self.RUNNING  
+        self.__status["state"] = self.RUNNING
         message = ""
         in_db = None
         inserted = None
@@ -251,7 +254,9 @@ class SQLLoader:
         
         """
         try:
-            registers_in_db = list(self.engine.execute(f'SELECT COUNT(*) FROM {self.dbtable}'))[0][0]
+            with self.engine.connect() as conn:
+                result = conn.execute(text(f'SELECT COUNT(*) FROM {self.dbtable}'))
+                registers_in_db = result.scalar()
         except:
             registers_in_db = None     
         self.__status["iteration"] = self.iteration
@@ -271,8 +276,9 @@ class SQLLoader:
         self.registers_deleted = 0
         
         try:
-            self.engine.execute(f'SELECT COUNT(*) FROM {self.dbtable}')
-            self.engine.execute(f'DROP TABLE {self.dbtable}')
+            with self.engine.begin() as conn:
+                conn.execute(text(f'SELECT COUNT(*) FROM {self.dbtable}'))
+                conn.execute(text(f'DROP TABLE {self.dbtable}'))
         except:
             pass
 
