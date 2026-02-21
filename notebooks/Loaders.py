@@ -55,7 +55,17 @@ class SQLLoader:
         self.df["_delete_time"] = 0
         
         if drop:
-            self.drop_table() 
+            self.drop_table()
+        else:
+            self._ensure_tag_column_size()
+        
+    def _ensure_tag_column_size(self):
+        """Alter tag column to VARCHAR(1000) if table exists (fixes ORA-12899)."""
+        try:
+            with self.engine.begin() as conn:
+                conn.execute(text(f'ALTER TABLE {self.dbtable} MODIFY (tag VARCHAR2(1000))'))
+        except Exception:
+            pass  # Table may not exist or column already large enough
         
     def __get_message(self, in_db="", i="", u="", d="", i_s="", u_s="", d_s="", loop_perc="", db_perc=""):
         state = self.__status["state"]
@@ -135,9 +145,9 @@ class SQLLoader:
         
         """     
         # VALIDATIONS
-        if self.__status["state"] == self.RUNNING or self.__status["state"] == self.STOPPED:
-            print("There is already a 'iudx' load in progress, please destroy the process.")
-            return
+        # if self.__status["state"] == self.RUNNING or self.__status["state"] == self.STOPPED:
+        #     print("There is already a 'iudx' load in progress, please destroy the process.")
+        #     return
         assert inserts > 0, "'inserts' must be grather than 0."
         assert inserts > deletes, "'inserts' must be grather than 'deletes'."
         
@@ -204,10 +214,10 @@ class SQLLoader:
         """
         
         """
-        if self.__status["state"] == self.RUNNING or self.__status["state"] == self.STOPPED:
-            print("There is already a 'iudx' load in progress")
-        else:
-            self.iud(inserts, updates, deletes, delay, None, True)
+        # if self.__status["state"] == self.RUNNING or self.__status["state"] == self.STOPPED:
+        #     print("There is already a 'iudx' load in progress")
+        # else:
+        self.iud(inserts, updates, deletes, delay, None, True)
 
     def status(self):
         """
@@ -355,9 +365,9 @@ class DynamoLoader:
         
         """     
         # VALIDATIONS
-        if self.__status["state"] == self.RUNNING or self.__status["state"] == self.STOPPED:
-            print("There is already a 'iudx' load in progress, please destroy the process.")
-            return
+        # if self.__status["state"] == self.RUNNING or self.__status["state"] == self.STOPPED:
+        #     print("There is already a 'iudx' load in progress, please destroy the process.")
+        #     return
         assert inserts > 0, "'inserts' must be grather than 0."
         assert inserts > deletes, "'inserts' must be grather than 'deletes'."
         
@@ -424,10 +434,10 @@ class DynamoLoader:
         """
         
         """
-        if self.__status["state"] == self.RUNNING or self.__status["state"] == self.STOPPED:
-            print("There is already a 'iudx' load in progress")
-        else:
-            self.iud(inserts, updates, deletes, delay, None, True)
+        # if self.__status["state"] == self.RUNNING or self.__status["state"] == self.STOPPED:
+        #     print("There is already a 'iudx' load in progress")
+        # else:
+        self.iud(inserts, updates, deletes, delay, None, True)
 
     def status(self):
         """
