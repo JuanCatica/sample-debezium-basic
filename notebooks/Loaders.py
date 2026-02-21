@@ -47,6 +47,8 @@ class SQLLoader:
         }
         
         self.df = pd.read_csv(f"{self.file}",dtype=dtype, parse_dates=date_fields)
+        if "tag" in self.df.columns:
+            self.df = self.df[self.df["tag"].astype(str).str.len() <= 90]
         self.df["_insert"] = 0
         self.df["_insert_time"] = 0
         self.df["_update"] = 0
@@ -56,16 +58,7 @@ class SQLLoader:
         
         if drop:
             self.drop_table()
-        else:
-            self._ensure_tag_column_size()
-        
-    def _ensure_tag_column_size(self):
-        """Alter tag column to VARCHAR(1000) if table exists (fixes ORA-12899)."""
-        try:
-            with self.engine.begin() as conn:
-                conn.execute(text(f'ALTER TABLE {self.dbtable} MODIFY (tag VARCHAR2(1000))'))
-        except Exception:
-            pass  # Table may not exist or column already large enough
+
         
     def __get_message(self, in_db="", i="", u="", d="", i_s="", u_s="", d_s="", loop_perc="", db_perc=""):
         state = self.__status["state"]
@@ -289,6 +282,8 @@ class DynamoLoader:
         }
         
         self.df = pd.read_csv(f"{self.file}",dtype=dtype, parse_dates=date_fields)
+        if "tag" in self.df.columns:
+            self.df = self.df[self.df["tag"].astype(str).str.len() <= 90]
         self.df['pk'] = self.df.index
         self.df["_insert"] = 0
         self.df["_insert_time"] = 0
