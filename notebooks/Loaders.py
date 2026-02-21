@@ -3,7 +3,6 @@
 import time
 import json
 import math
-import _thread
 from collections import deque
 
 import boto3
@@ -208,7 +207,7 @@ class SQLLoader:
         if self.__status["state"] == self.RUNNING or self.__status["state"] == self.STOPPED:
             print("There is already a 'iudx' load in progress")
         else:
-            _thread.start_new_thread(self.iud, (inserts, updates , deletes, delay, None, True))
+            self.iud(inserts, updates, deletes, delay, None, True)
 
     def status(self):
         """
@@ -428,7 +427,7 @@ class DynamoLoader:
         if self.__status["state"] == self.RUNNING or self.__status["state"] == self.STOPPED:
             print("There is already a 'iudx' load in progress")
         else:
-            _thread.start_new_thread(self.iud, (inserts, updates , deletes, delay, None, True))
+            self.iud(inserts, updates, deletes, delay, None, True)
 
     def status(self):
         """
@@ -612,7 +611,7 @@ class KinesisLoader:
         if self.__status["state"] == self.RUNNING or self.__status["state"] == self.STOPPED:
             print("There is already a 'loadx' load in progress")
         else:
-            _thread.start_new_thread(self.load, (max_events, partition_ket, delay, restart, True))
+            self.load(max_events, partition_ket, delay, restart, True)
 
     def status(self):
         return { "EventsSend":self.events_sent }
