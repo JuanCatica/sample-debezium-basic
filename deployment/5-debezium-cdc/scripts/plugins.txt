@@ -1,0 +1,5 @@
+# Plugin contents - change this file to force plugin rebuild
+# Hash of this file is used as trigger
+debezium-connector-oracle-2.5.0.Final
+msk-config-providers-0.4.0
+ojdbc8-21.18.0.0

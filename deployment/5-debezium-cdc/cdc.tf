@@ -101,7 +101,8 @@ resource "aws_s3_bucket" "connector_plugins" {
 
 resource "null_resource" "build_and_upload_plugin" {
   triggers = {
-    script_hash = filemd5("${path.module}/scripts/build_debezium_oracle_plugin.sh")
+    script_hash   = filemd5("${path.module}/scripts/build_debezium_oracle_plugin.sh")
+    plugins_hash  = filemd5("${path.module}/scripts/plugins.txt")
   }
 
   provisioner "local-exec" {
@@ -278,9 +279,6 @@ resource "aws_security_group" "msk_connect" {
     project = "debezium"
   }
 }
-
-# Permitir que MSK Connect se conecte a Oracle (añadir al SG de RDS vía data)
-# Nota: El SG de RDS en 2-db permite 0.0.0.0/0 en 1521, así que no hace falta modificar
 
 # ---------------------------
 # MSK Connect Connector: Debezium Oracle
