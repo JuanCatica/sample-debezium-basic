@@ -11,10 +11,13 @@ set -euo pipefail
 
 DEBEZIUM_VERSION="2.5.0.Final"
 CONFIG_PROVIDER_VERSION="0.4.0"
+ORACLE_JDBC_VERSION="21.18.0.0"
 
 DEBEZIUM_URL="https://repo1.maven.org/maven2/io/debezium/debezium-connector-oracle/${DEBEZIUM_VERSION}/debezium-connector-oracle-${DEBEZIUM_VERSION}-plugin.tar.gz"
 # AWS official config provider (Secrets Manager, SSM, S3) - jcustenborder releases have no assets
 CONFIG_PROVIDER_URL="https://github.com/aws-samples/msk-config-providers/releases/download/r${CONFIG_PROVIDER_VERSION}/msk-config-providers-${CONFIG_PROVIDER_VERSION}-with-dependencies.zip"
+# Oracle JDBC driver - Debezium Oracle connector does NOT include it (licensing)
+ORACLE_JDBC_URL="https://repo1.maven.org/maven2/com/oracle/database/jdbc/ojdbc8/${ORACLE_JDBC_VERSION}/ojdbc8-${ORACLE_JDBC_VERSION}.jar"
 
 BUCKET="${1:?Usage: $0 <s3-bucket> <aws-region>}"
 AWS_REGION="${2:?Usage: $0 <s3-bucket> <aws-region>}"
@@ -28,6 +31,9 @@ curl -sSL -o "$WORK_DIR/debezium.tar.gz" "$DEBEZIUM_URL"
 echo "==> Descargando AWS MSK Config Providers ${CONFIG_PROVIDER_VERSION}..."
 curl -sSL -L -o "$WORK_DIR/config-provider.zip" "$CONFIG_PROVIDER_URL"
 
+echo "==> Descargando Oracle JDBC driver ${ORACLE_JDBC_VERSION}..."
+curl -sSL -o "$WORK_DIR/ojdbc8.jar" "$ORACLE_JDBC_URL"
+
 echo "==> Extrayendo archivos..."
 mkdir -p "$WORK_DIR/debezium" "$WORK_DIR/config-provider"
 tar -xzf "$WORK_DIR/debezium.tar.gz" -C "$WORK_DIR/debezium"
@@ -40,6 +46,7 @@ mkdir -p "$PLUGIN_DIR/lib"
 # Copiar todos los JARs a lib/
 find "$WORK_DIR/debezium" -name "*.jar" -exec cp {} "$PLUGIN_DIR/lib/" \;
 find "$WORK_DIR/config-provider" -name "*.jar" -exec cp {} "$PLUGIN_DIR/lib/" \;
+cp "$WORK_DIR/ojdbc8.jar" "$PLUGIN_DIR/lib/"
 
 # Copiar directorios adicionales si existen (doc, etc.)
 for dir in doc etc; do
