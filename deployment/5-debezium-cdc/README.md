@@ -56,6 +56,7 @@ terraform apply -var="deployment_name=<nombre>"  # Re-ejecutar para crear el con
 | oracle_password | Contraseña Oracle (debe coincidir con 2-db) | changeme123 |
 | debezium_topic_prefix | Prefijo para topics CDC | oracle-cdc |
 | table_include_list | Tablas a capturar (regex) | .* (todas) |
+| table_exclude_list | Tablas a excluir (regex) | .*\\.RDSADMIN\\..* (schema RDSADMIN) |
 
 ## Outputs
 
@@ -79,3 +80,12 @@ Ejemplo: `oracle-cdc.DBSOURCE.ADMIN.MYTABLE`
   3. `terraform apply` (recreará plugin y connector)
 - RDS Oracle 19c CDB: Si tu instancia es CDB, añadir en `locals`: `oracle_pdb_name = "ORCL"` y en connector_config: `"database.pdb.name" = local.oracle_pdb_name`
 - Verificar conectividad: MSK Connect debe poder alcanzar Oracle en puerto 1521 (se añade regla de SG automáticamente)
+
+**"ConnectorNotReady" / "1 failed tasks out of 1"**
+- Revisar logs en CloudWatch: `aws logs tail /aws/msk-connect/<deployment_name> --follow`
+- Causas comunes:
+  1. **ARCHIVELOG no habilitado** - Ejecutar en Oracle como SYSDBA: `ALTER DATABASE ARCHIVELOG;` (RDS puede requerir reboot)
+  2. **Supplemental logging** - `ALTER DATABASE ADD SUPPLEMENTAL LOG DATA;` y `ALTER DATABASE ADD SUPPLEMENTAL LOG DATA (ALL) COLUMNS;`
+  3. **Sin tablas** - Si no hay tablas que coincidan con `table.include.list`, crear al menos una tabla de prueba
+  4. **RDS Oracle CDB** - Si es CDB, el usuario debe tener acceso al PDB. Conectar al PDB correcto
+  5. **"Snapshotting of table RDSADMIN.TRACEFILE_LISTING failed" / ORA-29913** - Tablas internas de RDS (RDSADMIN) como TRACEFILE_LISTING son external tables que fallan con `AS OF SCN`. La config incluye `table.exclude.list = ".*\\.RDSADMIN\\..*"` para excluirlas. Si ves errores similares con otros schemas, añade exclusiones en `locals.table_exclude_list`

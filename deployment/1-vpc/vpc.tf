@@ -69,12 +69,12 @@ resource "aws_security_group" "vpc_endpoints" {
   name_prefix = "vpc-endpoints-${var.deployment_name}"
   vpc_id      = module.vpc.vpc_id
 
-  # Allow HTTPS traffic from private subnets (where ECS tasks run)
+  # Allow HTTPS traffic from private subnets (ECS tasks) and public subnets (SageMaker notebook)
   ingress {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
-    cidr_blocks = module.vpc.private_subnets_cidr_blocks
+    cidr_blocks = concat(module.vpc.private_subnets_cidr_blocks, module.vpc.public_subnets_cidr_blocks)
   }
 
   # Allow all outbound traffic

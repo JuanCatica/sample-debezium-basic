@@ -45,7 +45,9 @@ locals {
   max_worker_count      = 3
   oracle_password       = "changeme123"
   debezium_topic_prefix = "oracle-cdc"
-  table_include_list    = ".*"
+  table_include_list    = "ADMIN.TAGS"
+  # Excluir RDSADMIN: tablas internas de Oracle RDS (ej. TRACEFILE_LISTING falla con AS OF SCN)
+  # End of Selection
 }
 
 # ---------------------------
@@ -126,7 +128,7 @@ resource "aws_mskconnect_custom_plugin" "debezium_oracle" {
   location {
     s3 {
       bucket_arn = aws_s3_bucket.connector_plugins.arn
-      file_key   = "debezium-oracle-connector/plugin.zip"
+      file_key   = "debezium-oracle-connector/plugin-v2.zip"
     }
   }
 }
@@ -411,4 +413,9 @@ output "oracle_connection_info" {
     port     = data.aws_db_instance.oracle.port
     database = data.aws_db_instance.oracle.db_name
   }
+}
+
+output "msk_connect_log_group" {
+  description = "CloudWatch log group para ver errores del connector"
+  value       = aws_cloudwatch_log_group.msk_connect.name
 }
