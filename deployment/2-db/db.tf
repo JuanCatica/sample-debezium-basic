@@ -117,10 +117,43 @@ resource "aws_security_group" "allow_public_source" {
 }
 
 # ---------------------------
+# IAM Role for RDS Enhanced Monitoring
+# ---------------------------
+
+resource "aws_iam_role" "rds_enhanced_monitoring" {
+  name = "rds-enhanced-monitoring-${var.deployment_name}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "monitoring.rds.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Name    = "rds-enhanced-monitoring-${var.deployment_name}"
+    project = "debezium"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "rds_enhanced_monitoring" {
+  role       = aws_iam_role.rds_enhanced_monitoring.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"
+}
+
+# ---------------------------
 # RDS Instance
 # ---------------------------
 
 resource "aws_db_instance" "oracle_source" {
+  depends_on = [aws_iam_role_policy_attachment.rds_enhanced_monitoring]
+
   identifier     = "oracledb-source-${var.deployment_name}"
   instance_class = local.source_rds_instance_type
   engine         = "oracle-se2"
@@ -143,6 +176,7 @@ resource "aws_db_instance" "oracle_source" {
   enabled_cloudwatch_logs_exports = ["alert", "audit", "listener", "trace"]
   backup_retention_period         = 1
   monitoring_interval             = 30
+  monitoring_role_arn             = aws_iam_role.rds_enhanced_monitoring.arn
 
   tags = {
     Name = "oracle_source-${var.deployment_name}"

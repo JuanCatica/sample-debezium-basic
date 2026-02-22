@@ -187,6 +187,14 @@ module "endpoints" {
       private_dns_enabled = true
       tags                = { Name = "sts-endpoint-${var.deployment_name}" }
     }
+
+    # SSM - required for MSK Connect SSM config provider (/dbtester/* credentials)
+    ssm = {
+      service             = "ssm"
+      subnet_ids          = module.vpc.private_subnets
+      private_dns_enabled = true
+      tags                = { Name = "ssm-endpoint-${var.deployment_name}" }
+    }
   }
 }
 

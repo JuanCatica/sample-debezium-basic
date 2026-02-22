@@ -113,7 +113,7 @@ resource "null_resource" "build_and_upload_plugin" {
 }
 
 # ---------------------------
-# Custom Plugin: Debezium Oracle + AWS Secrets Manager Config Provider
+# Custom Plugin: Debezium Oracle + AWS MSK Config Providers (SSM, Secrets Manager, S3)
 # ---------------------------
 
 resource "aws_mskconnect_custom_plugin" "debezium_oracle" {
@@ -131,41 +131,32 @@ resource "aws_mskconnect_custom_plugin" "debezium_oracle" {
 }
 
 # ---------------------------
-# Secrets Manager: credenciales Oracle
+# Data: SSM Parameters (creados por 2-db)
 # ---------------------------
 
-resource "aws_secretsmanager_secret" "oracle_credentials" {
-  name        = "debezium/oracle-${var.deployment_name}"
-  description = "Credenciales Oracle para Debezium CDC"
-
-  tags = {
-    Name    = "oracle-creds-${var.deployment_name}"
-    project = "debezium"
-  }
+data "aws_ssm_parameter" "dbuser" {
+  name            = "/dbtester/dbuser"
+  with_decryption = true
 }
 
-resource "aws_secretsmanager_secret_version" "oracle_credentials" {
-  secret_id = aws_secretsmanager_secret.oracle_credentials.id
-
-  secret_string = jsonencode({
-    username = data.aws_db_instance.oracle.master_username
-    password = local.oracle_password
-  })
+data "aws_ssm_parameter" "dbpass" {
+  name            = "/dbtester/dbpass"
+  with_decryption = true
 }
 
 # ---------------------------
-# Worker Configuration con Secrets Manager Config Provider
+# Worker Configuration con SSM Config Provider
 # ---------------------------
 
 resource "aws_mskconnect_worker_configuration" "debezium" {
   name                    = "debezium-worker-config-${var.deployment_name}"
-  description             = "Worker config con Secrets Manager para Debezium Oracle"
+  description             = "Worker config con SSM Parameter Store para Debezium Oracle"
   properties_file_content = <<PROPERTIES
 key.converter=org.apache.kafka.connect.storage.StringConverter
 value.converter=org.apache.kafka.connect.storage.StringConverter
-config.providers=secretsmanager
-config.providers.secretsmanager.class=com.amazonaws.kafka.config.providers.SecretsManagerConfigProvider
-config.providers.secretsmanager.param.region=${data.aws_region.current.region}
+config.providers=ssm
+config.providers.ssm.class=com.amazonaws.kafka.config.providers.SsmParamStoreConfigProvider
+config.providers.ssm.param.region=${data.aws_region.current.region}
 PROPERTIES
 }
 
@@ -205,13 +196,14 @@ resource "aws_iam_role_policy" "msk_connect_service" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
-      # Secrets Manager - Oracle credentials
+      # SSM Parameter Store - Oracle credentials (creados por 2-db)
       {
         Effect = "Allow"
         Action = [
-          "secretsmanager:GetSecretValue"
+          "ssm:GetParameter",
+          "ssm:GetParameters"
         ]
-        Resource = aws_secretsmanager_secret.oracle_credentials.arn
+        Resource = "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/dbtester/*"
       },
       # CloudWatch Logs
       {
@@ -320,8 +312,8 @@ resource "aws_mskconnect_connector" "debezium_oracle" {
     "tasks.max"                                                           = "1"
     "database.hostname"                                                   = data.aws_db_instance.oracle.address
     "database.port"                                                       = tostring(data.aws_db_instance.oracle.port)
-    "database.user"                                                       = "$${secretsmanager:${aws_secretsmanager_secret.oracle_credentials.name}:username}"
-    "database.password"                                                   = "$${secretsmanager:${aws_secretsmanager_secret.oracle_credentials.name}:password}"
+    "database.user"                                                       = "$${ssm::/dbtester/dbuser}"
+    "database.password"                                                   = "$${ssm::/dbtester/dbpass}"
     "database.dbname"                                                     = data.aws_db_instance.oracle.db_name
     "topic.prefix"                                                        = local.debezium_topic_prefix
     "table.include.list"                                                  = local.table_include_list
