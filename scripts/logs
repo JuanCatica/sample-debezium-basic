@@ -1,9 +1,0 @@
-#!/bin/bash
-
-# Get deployment name from deployment_name.txt
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DEPLOYMENT_NAME=$(cat "$SCRIPT_DIR/../deployment_name.txt" | tr -d '[:space:]')
-
-aws logs tail "/ecs/${DEPLOYMENT_NAME}" \
-  --region us-east-1 \
-  --follow
