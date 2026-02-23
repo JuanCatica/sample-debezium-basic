@@ -86,6 +86,39 @@ Con esto se generan cambios en Oracle que se propagan por el pipeline CDC hasta 
 
 Ejecuta el notebook **`4 CDC Latency.ipynb`** para consultar Aurora y calcular la latencia end-to-end (`_sink_ts_ms - _source_ts_ms`).
 
+## SMTs para medición de latencia
+
+El Debezium JDBC Sink usa dos **Single Message Transforms (SMT)** que añaden las columnas necesarias para medir la latencia CDC:
+
+```hcl
+# SMT 1: ExtractNewRecordState - Flatten envelope + add source timestamp
+"transforms"                            = "extract,insert"
+"transforms.extract.type"               = "io.debezium.transforms.ExtractNewRecordState"
+"transforms.extract.add.fields"         = "source.ts_ms"
+"transforms.extract.add.fields.prefix"  = "_"
+"transforms.extract.delete.tombstone.handling.mode" = "rewrite"
+
+# SMT 2: InsertField - Add sink write timestamp
+"transforms.insert.type"            = "org.apache.kafka.connect.transforms.InsertField$Value"
+"transforms.insert.timestamp.field" = "_sink_ts_ms"
+```
+
+**SMT 1 – ExtractNewRecordState**
+
+- Extrae el payload (`after`/`before`) del envelope Debezium y lo aplana para que el JDBC Sink pueda escribirlo en Aurora.
+- `add.fields = "source.ts_ms"`: añade el timestamp de commit en Oracle (milisegundos desde epoch) como columna `_source_ts_ms`.
+- `add.fields.prefix = "_"`: prefijo para las columnas añadidas.
+- `delete.tombstone.handling.mode = "rewrite"`: reescribe los tombstones de DELETE para que el sink los procese correctamente.
+
+**SMT 2 – InsertField**
+
+- Añade la columna `_sink_ts_ms` con el timestamp en que el connector escribe el registro en Aurora.
+- Es el momento en que el JDBC Sink procesa el evento.
+
+**Cálculo de latencia**
+
+`latency_ms = _sink_ts_ms - _source_ts_ms` representa la latencia end-to-end: desde el commit en Oracle hasta la escritura en Aurora.
+
 ## Destruir el stack
 
 Destruye en orden inverso al despliegue:
