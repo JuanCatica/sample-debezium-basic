@@ -23,6 +23,8 @@ terraform apply -var="deployment_name=<nombre>"
 
 El connector crea la tabla `oracle_cdc_admin_tags` (topic con `.` reemplazados por `_`, lowercase en PostgreSQL) con schema evolution básica. Los eventos INSERT/UPDATE se escriben con upsert; los DELETE eliminan filas por primary key.
 
+**Columnas de latencia CDC:** Los SMTs añaden `_source_ts_ms` (timestamp Oracle) y `_sink_ts_ms` (timestamp escritura Aurora). Usa el notebook `4 CDC Latency.ipynb` para calcular la latencia end-to-end.
+
 ## Verificación
 
 - **Estado del connector**: AWS Console > Amazon MSK > Connectors

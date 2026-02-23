@@ -220,12 +220,16 @@ resource "aws_iam_role_policy" "msk_connect_service" {
         ]
         Resource = data.aws_msk_cluster.main.arn
       },
-      # MSK topics - Read (consume CDC events)
+      # MSK topics - Read (consume CDC), Write+Create (internal offsets/configs/status)
       {
         Effect = "Allow"
         Action = [
           "kafka-cluster:ReadData",
-          "kafka-cluster:DescribeTopic"
+          "kafka-cluster:WriteData",
+          "kafka-cluster:CreateTopic",
+          "kafka-cluster:DescribeTopic",
+          "kafka-cluster:DescribeTopicDynamicConfiguration",
+          "kafka-cluster:AlterTopic"
         ]
         Resource = "${replace(data.aws_msk_cluster.main.arn, ":cluster/", ":topic/")}/*"
       },
@@ -316,6 +320,17 @@ resource "aws_mskconnect_connector" "debezium_jdbc_sink" {
     "key.converter"         = "org.apache.kafka.connect.json.JsonConverter"
     "value.converter"       = "org.apache.kafka.connect.json.JsonConverter"
     "config.action.reload"  = "none"
+
+    # SMT: Flatten Debezium envelope and add source timestamp (Oracle commit time)
+    "transforms"                            = "extract,insert"
+    "transforms.extract.type"               = "io.debezium.transforms.ExtractNewRecordState"
+    "transforms.extract.add.fields"         = "source.ts_ms"
+    "transforms.extract.add.fields.prefix"   = "_"
+    "transforms.extract.delete.tombstone.handling.mode" = "rewrite"
+
+    # SMT: Add sink write timestamp (when record is processed by connector)
+    "transforms.insert.type"            = "org.apache.kafka.connect.transforms.InsertField$Value"
+    "transforms.insert.timestamp.field" = "_sink_ts_ms"
   }
 
   kafka_cluster {
