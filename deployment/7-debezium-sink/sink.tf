@@ -144,6 +144,7 @@ value.converter=org.apache.kafka.connect.json.JsonConverter
 config.providers=ssm
 config.providers.ssm.class=com.amazonaws.kafka.config.providers.SsmParamStoreConfigProvider
 config.providers.ssm.param.region=${data.aws_region.current.region}
+plugin.discovery=only_scan
 PROPERTIES
 }
 
@@ -264,6 +265,17 @@ resource "aws_security_group" "msk_connect" {
   }
 }
 
+# Permitir MSK Connect -> Aurora (SG creado en 6-aurora)
+resource "aws_security_group_rule" "aurora_from_msk_connect" {
+  type                     = "ingress"
+  from_port                 = 5432
+  to_port                   = 5432
+  protocol                  = "tcp"
+  source_security_group_id  = aws_security_group.msk_connect.id
+  security_group_id         = tolist(data.aws_rds_cluster.aurora.vpc_security_group_ids)[0]
+  description               = "Allow MSK Connect JDBC Sink to Aurora"
+}
+
 # ---------------------------
 # MSK Connect Connector: Debezium JDBC Sink
 # ---------------------------
@@ -290,19 +302,20 @@ resource "aws_mskconnect_connector" "debezium_jdbc_sink" {
   }
 
   connector_configuration = {
-    "connector.class"     = "io.debezium.connector.jdbc.JdbcSinkConnector"
-    "tasks.max"           = "1"
-    "topics"              = local.cdc_topic
-    "connection.url"      = "jdbc:postgresql://${data.aws_rds_cluster.aurora.endpoint}:${data.aws_rds_cluster.aurora.port}/${data.aws_rds_cluster.aurora.database_name}"
-    "connection.username" = "$${ssm::/aurora/user}"
-    "connection.password" = "$${ssm::/aurora/password}"
-    "insert.mode"         = "upsert"
-    "delete.enabled"      = "true"
-    "primary.key.mode"    = "record_key"
-    "schema.evolution"    = "basic"
-    "use.time.zone"       = "UTC"
-    "key.converter"       = "org.apache.kafka.connect.json.JsonConverter"
-    "value.converter"     = "org.apache.kafka.connect.json.JsonConverter"
+    "connector.class"       = "io.debezium.connector.jdbc.JdbcSinkConnector"
+    "tasks.max"             = "1"
+    "topics"                = local.cdc_topic
+    "connection.url"         = "jdbc:postgresql://${data.aws_rds_cluster.aurora.endpoint}:${data.aws_rds_cluster.aurora.port}/${data.aws_rds_cluster.aurora.database_name}"
+    "connection.username"   = "$${ssm::/aurora/user}"
+    "connection.password"   = "$${ssm::/aurora/password}"
+    "insert.mode"           = "upsert"
+    "delete.enabled"        = "true"
+    "primary.key.mode"      = "record_key"
+    "schema.evolution"      = "basic"
+    "use.time.zone"         = "UTC"
+    "key.converter"         = "org.apache.kafka.connect.json.JsonConverter"
+    "value.converter"       = "org.apache.kafka.connect.json.JsonConverter"
+    "config.action.reload"  = "none"
   }
 
   kafka_cluster {
