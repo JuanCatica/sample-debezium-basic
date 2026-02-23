@@ -23,7 +23,7 @@ class SQLLoader:
     RUNNING = "RUNNING"
     DESTROYED = "DESTOYED"
     
-    def __init__(self, dbengine, dbhost, dbuser, dbpass, dbport, dbname, dbtable, file=None, dtype_db=None):
+    def __init__(self, dbengine, dbhost, dbuser, dbpass, dbport, dbname, dbtable, dtype_db=None):
         """
         Initialize the loader.
         """
