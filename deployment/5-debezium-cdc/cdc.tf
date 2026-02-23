@@ -332,6 +332,8 @@ resource "aws_mskconnect_connector" "debezium_oracle" {
     "include.schema.changes"                                              = "true"
     "key.converter"                                                       = "org.apache.kafka.connect.json.JsonConverter"
     "value.converter"                                                     = "org.apache.kafka.connect.json.JsonConverter"
+    "key.converter.schemas.enable"                                        = "true"
+    "value.converter.schemas.enable"                                      = "true"
   }
 
   kafka_cluster {
