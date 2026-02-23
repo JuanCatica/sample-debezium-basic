@@ -87,11 +87,19 @@ resource "aws_security_group" "aurora" {
   vpc_id      = data.aws_vpc.main.id
 
   ingress {
-    description = "PostgreSQL/Aurora"
+    description = "PostgreSQL/Aurora (VPC)"
     from_port   = local.aurora_port
     to_port     = local.aurora_port
     protocol    = "tcp"
     cidr_blocks = [data.aws_vpc.main.cidr_block]
+  }
+
+  ingress {
+    description = "PostgreSQL/Aurora (public)"
+    from_port   = local.aurora_port
+    to_port     = local.aurora_port
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -190,11 +198,12 @@ resource "aws_rds_cluster" "aurora" {
 resource "aws_rds_cluster_instance" "aurora" {
   depends_on = [aws_iam_role_policy_attachment.aurora_enhanced_monitoring]
 
-  identifier         = "aurora-${var.deployment_name}-instance-1"
-  cluster_identifier = aws_rds_cluster.aurora.id
-  instance_class     = local.aurora_instance_class
-  engine             = aws_rds_cluster.aurora.engine
-  engine_version     = aws_rds_cluster.aurora.engine_version
+  identifier           = "aurora-${var.deployment_name}-instance-1"
+  cluster_identifier   = aws_rds_cluster.aurora.id
+  instance_class       = local.aurora_instance_class
+  engine               = aws_rds_cluster.aurora.engine
+  engine_version       = aws_rds_cluster.aurora.engine_version
+  publicly_accessible  = true
 
   monitoring_interval = 60
   monitoring_role_arn = aws_iam_role.aurora_enhanced_monitoring.arn
