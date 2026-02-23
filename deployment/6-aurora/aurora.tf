@@ -6,7 +6,7 @@
 #
 # Requisitos previos: 1-vpc desplegado (para VPC, subnets, etc.)
 #
-# Aurora MySQL como target/sink para CDC (Debezium Oracle -> Kafka -> Aurora)
+# Aurora PostgreSQL como target/sink para CDC (Debezium Oracle -> Kafka -> Aurora)
 
 # -------------------------------------------------------------
 # Aurora Instance Types (Reference)
@@ -40,7 +40,7 @@ provider "aws" {
 locals {
   aurora_username       = "admin"
   aurora_password       = "changeme123"
-  aurora_port            = 3306
+  aurora_port            = 5432
   aurora_instance_class = "db.t4g.medium" # Graviton, cost-effective
   aurora_database_name   = "auroradb"
 }
@@ -83,11 +83,11 @@ data "aws_subnets" "private" {
 
 resource "aws_security_group" "aurora" {
   name        = "aurora-${var.deployment_name}"
-  description = "Allow MySQL traffic to Aurora"
+  description = "Allow PostgreSQL traffic to Aurora"
   vpc_id      = data.aws_vpc.main.id
 
   ingress {
-    description = "MySQL/Aurora"
+    description = "PostgreSQL/Aurora"
     from_port   = local.aurora_port
     to_port     = local.aurora_port
     protocol    = "tcp"
@@ -159,9 +159,9 @@ resource "aws_iam_role_policy_attachment" "aurora_enhanced_monitoring" {
 
 resource "aws_rds_cluster" "aurora" {
   cluster_identifier     = "aurora-${var.deployment_name}"
-  engine                 = "aurora-mysql"
+  engine                 = "aurora-postgresql"
   engine_mode            = "provisioned"
-  engine_version         = "8.0.mysql_aurora.3.08.2"
+  engine_version         = "16.4"
   database_name          = local.aurora_database_name
   master_username        = local.aurora_username
   master_password        = local.aurora_password
@@ -170,12 +170,12 @@ resource "aws_rds_cluster" "aurora" {
   db_subnet_group_name   = aws_db_subnet_group.aurora.name
   vpc_security_group_ids = [aws_security_group.aurora.id]
 
-  backup_retention_period = 7
-  preferred_backup_window  = "03:00-04:00"
-  skip_final_snapshot     = true
-  apply_immediately      = true
+  backup_retention_period   = 7
+  preferred_backup_window   = "03:00-04:00"
+  skip_final_snapshot       = true
+  apply_immediately         = true
 
-  enabled_cloudwatch_logs_exports = ["audit", "error", "general", "slowquery"]
+  enabled_cloudwatch_logs_exports = ["postgresql"]
 
   tags = {
     Name    = "aurora-${var.deployment_name}"
@@ -315,10 +315,10 @@ output "aurora_password" {
 
 output "aurora_jdbc_url" {
   description = "JDBC URL for writer"
-  value       = "jdbc:mysql://${aws_rds_cluster.aurora.endpoint}:${aws_rds_cluster.aurora.port}/${aws_rds_cluster.aurora.database_name}"
+  value       = "jdbc:postgresql://${aws_rds_cluster.aurora.endpoint}:${aws_rds_cluster.aurora.port}/${aws_rds_cluster.aurora.database_name}"
 }
 
 output "aurora_connection_string" {
-  description = "Connection string for MySQL client"
+  description = "Connection string for PostgreSQL client"
   value       = "${aws_rds_cluster.aurora.endpoint}:${aws_rds_cluster.aurora.port}/${aws_rds_cluster.aurora.database_name}"
 }

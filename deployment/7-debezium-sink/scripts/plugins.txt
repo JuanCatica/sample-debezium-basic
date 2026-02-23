@@ -1,0 +1,5 @@
+# Plugin contents - change this file to force plugin rebuild
+# Hash of this file is used as trigger
+debezium-connector-jdbc-2.5.0.Final
+msk-config-providers-0.4.0
+postgresql-42.7.2
