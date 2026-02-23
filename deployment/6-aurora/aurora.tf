@@ -66,14 +66,14 @@ data "aws_vpc" "main" {
   }
 }
 
-data "aws_subnets" "private" {
+data "aws_subnets" "public" {
   filter {
     name   = "vpc-id"
     values = [data.aws_vpc.main.id]
   }
   filter {
     name   = "tag:Name"
-    values = ["vpc-${var.deployment_name}-private-*"]
+    values = ["vpc-${var.deployment_name}-public-*"]
   }
 }
 
@@ -114,7 +114,7 @@ resource "aws_security_group" "aurora" {
 
 resource "aws_db_subnet_group" "aurora" {
   name       = "aurora-subnet-group-${var.deployment_name}"
-  subnet_ids = data.aws_subnets.private.ids
+  subnet_ids = data.aws_subnets.public.ids
 
   tags = {
     Name    = "aurora-subnet-group-${var.deployment_name}"
