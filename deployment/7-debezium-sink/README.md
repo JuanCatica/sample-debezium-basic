@@ -25,6 +25,18 @@ El connector crea la tabla `oracle_cdc_admin_tags` (topic con `.` reemplazados p
 
 **Columnas de latencia CDC:** Los SMTs añaden `_source_ts_ms` (timestamp Oracle) y `_sink_ts_ms` (timestamp escritura Aurora). Usa el notebook `4 CDC Latency.ipynb` para calcular la latencia end-to-end.
 
+## Troubleshooting: "relation already exists"
+
+Si el connector falla con `relation "oracle-cdc_ADMIN_TAGS" already exists`, la tabla ya existe de un run anterior. Solución:
+
+1. Conectar a Aurora PostgreSQL y ejecutar:
+   ```sql
+   DROP TABLE IF EXISTS "oracle-cdc_ADMIN_TAGS" CASCADE;
+   DROP TABLE IF EXISTS oracle_cdc_admin_tags CASCADE;
+   DROP TABLE IF EXISTS "oracle_cdc_ADMIN_TAGS" CASCADE;
+   ```
+2. Reiniciar el connector JDBC Sink (AWS Console > MSK > Connectors > Restart).
+
 ## Verificación
 
 - **Estado del connector**: AWS Console > Amazon MSK > Connectors
