@@ -145,7 +145,7 @@ class SQLLoader:
                 conn.execute(text(f"""
                     UPDATE {self.dbtable}
                     SET "_update" = "_update" + 1, "_update_time" = {time.time()}
-                    WHERE "index" IN ({indexes})
+                    WHERE "idx" IN ({indexes})
                 """))
             self.df[self.df.index.isin(temp_df.index)] = temp_df.copy()
             self.registers_updated += len(temp_df)
@@ -165,7 +165,7 @@ class SQLLoader:
             with self.engine.begin() as conn:
                 conn.execute(text(f"""
                     DELETE FROM {self.dbtable}
-                    WHERE "index" IN ({indexes})
+                    WHERE "idx" IN ({indexes})
                 """))
             self.df[self.df.index.isin(temp_df.index)] = temp_df.copy()
             self.registers_deleted += len(temp_df)

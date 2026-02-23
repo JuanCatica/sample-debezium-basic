@@ -315,7 +315,7 @@ resource "aws_mskconnect_connector" "debezium_jdbc_sink" {
     "insert.mode"           = "upsert"
     "delete.enabled"        = "false"
     "primary.key.mode"      = "record_value"
-    "primary.key.fields"    = "index"
+    "primary.key.fields"    = "idx"
     "schema.evolution"      = "basic"
     "use.time.zone"         = "UTC"
     "key.converter"                  = "org.apache.kafka.connect.json.JsonConverter"
