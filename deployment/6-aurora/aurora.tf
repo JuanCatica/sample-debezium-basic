@@ -38,7 +38,7 @@ provider "aws" {
 # ---------------------------
 
 locals {
-  aurora_username       = "admin"
+  aurora_username       = "masteradmin"
   aurora_password       = "changeme123"
   aurora_port            = 5432
   aurora_instance_class = "db.t4g.medium" # Graviton, cost-effective
