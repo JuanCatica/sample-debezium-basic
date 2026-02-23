@@ -11,9 +11,9 @@ import awswrangler as wr
 from sqlalchemy import create_engine, text, bindparam
 from tqdm import tqdm
 
-######################################
+# ----------------------
 # SQLLoader Class
-#
+# ----------------------
 class SQLLoader:
     """
     
