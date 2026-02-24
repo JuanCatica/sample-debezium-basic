@@ -52,6 +52,8 @@ class SQLLoader:
         """
         self.file = file
         self.df = pd.read_csv(f"{self.file}",dtype=dtype, parse_dates=date_fields)
+        if "index" in self.df.columns:
+            self.df = self.df.rename(columns={"index": "idx"})
         if "tag" in self.df.columns:
             self.df = self.df[self.df["tag"].astype(str).str.len() <= 90]
         
@@ -124,7 +126,8 @@ class SQLLoader:
             name=self.dbtable,
             con=self.engine,
             if_exists="append",
-            dtype=self.dtype_db
+            dtype=self.dtype_db,
+            index_label="idx"
         )
         self.df.iloc[self.registers_inserted : self.registers_inserted + registers] = temp_df
         self.registers_inserted += registers
